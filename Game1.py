@@ -24,7 +24,7 @@ anim_time=500 #ms
 
 
 def F(x):
-    return x[0]**2
+    return (x[0]-10)**2
 
 
 
