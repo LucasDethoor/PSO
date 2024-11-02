@@ -1,7 +1,23 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 import matplotlib.animation as animation
+
+import pygame
+
+from pygame.locals import (
+    K_UP,
+    K_DOWN,
+    K_LEFT,
+    K_RIGHT,
+    K_ESCAPE,
+    KEYDOWN,
+    QUIT,
+) # No need to call with pygame.
+
+
+
 #1: PSO fundamentals: minimum of x2, plot of particles on graph
 
 
@@ -23,10 +39,22 @@ N_Steps = 15
 anim_time=500 #ms
 
 
-def F(x):
-    return (x[0]-10)**2
+pygame.init()
 
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
 
+#Colors:
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+clock = pygame.time.Clock()
+block_size = 10
+
+Ratio_Screen_Grid=SCREEN_WIDTH / Uni_Grid_Size
+
+def Fct(x):
+    res = (x[0])**2
+    return res
 
 # ------------------------- Classes and Functions ------------------------- 
 
@@ -40,8 +68,10 @@ class Grid:
 class Part:
     def __init__(self,name,pos,vel) -> None:
         Part.Name=name
-        Part.Pos = pos
-        Part.bkp = pos
+        Part.Pos = []
+        Part.Pos[:] = pos
+        Part.bkp = []
+        Part.bkp[:] = pos
         Part.Vel = vel
         
 
@@ -49,6 +79,7 @@ class Swarm:
     def __init__(self) -> None:
         Swarm.Particles = []
         Swarm.PartPositions = np.zeros((N_part,Space_Dim))
+        Swarm.SBKP = []
 
 
 
@@ -63,7 +94,7 @@ swarm = Swarm()
 Initial_Pos = (np.random.rand(N_part,Space_Dim)-0.5)*2*Uni_Grid_Size        #In [-100,100]
 Initial_Vel = (np.random.rand(N_part,Space_Dim)-0.5)*4*Uni_Grid_Size        #In [-200,200]
 
-print("Vel ini:", Initial_Vel)
+#print("Vel ini:", Initial_Vel)
 
 for i in range(N_part):
     pos_i = Initial_Pos[i,:]
@@ -71,36 +102,31 @@ for i in range(N_part):
     part_i= Part(i,pos_i,vel_i)
     
     if i==0:
-        swarm.SBKP = part_i.Pos
-    elif F(part_i.bkp) < F(swarm.SBKP):
-        swarm.SBKP = part_i.bkp
+        for j in range(Space_Dim):
+            swarm.SBKP.append(part_i.Pos[j])
+    elif Fct(part_i.bkp) < Fct(swarm.SBKP):
+        swarm.SBKP[:]=part_i.Pos[:]
 
     swarm.Particles.append(part_i)
     swarm.PartPositions[i]=pos_i
-    #print(part_i.bkp)
 
-print("PosIni = ", swarm.PartPositions)
+print("PosIni = \n", swarm.PartPositions)
 
 
 # ------------------------- Plot 1 ------------------------- 
 
-f0=swarm.PartPositions
-y = [0]*N_part
+win = pygame.display
+win.set_caption("Test 1")
+screen = win.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
+font = pygame.font.Font(None, 30)
 
-fig = plt.figure(figsize=(8,8))
-ax = fig.add_subplot(autoscale_on = False, xlim=(-Uni_Grid_Size, Uni_Grid_Size), ylim = (-1, 1))
-line, = ax.plot(f0,y,'o', c="r" , label="Particles")
-time_text = ax.text(0.05, 0.9, '', transform = ax.transAxes)
-ax.legend()
+
+
 
 # ------------------------- Process ------------------------- 
 
-def update(frame):
-    if frame<5:
-        line.set_data(swarm.PartPositions,y)
-        time_text.set_text(f"Initial Position")
-        return line,time_text
-
+def update():
+    
     for i in range(N_part):
         part_i=swarm.Particles[i]
         for dim_ind in range(Space_Dim):
@@ -115,30 +141,66 @@ def update(frame):
             else:
                 part_i.Pos[dim_ind] = new_pos
         
-        swarm.PartPositions[i] = part_i.Pos
-        if F(part_i.Pos) < F(part_i.bkp):
-            part_i.bkp = part_i.Pos
-            if F(part_i.bkp)<F(swarm.SBKP):
-                swarm.SBKP = part_i.bkp
+        swarm.PartPositions[i][:] = part_i.Pos[:]
+        Evaluation_i = Fct(part_i.Pos)
+
+        if Evaluation_i < Fct(part_i.bkp):
+            part_i.bkp[:] = part_i.Pos[:]
+            if Evaluation_i<Fct(swarm.SBKP):
+                swarm.SBKP[:] = part_i.bkp[:]
     
-    line.set_data(swarm.PartPositions,y)
-    time_text.set_text(f"Nb of steps : {frame-4}\n Best known position : {swarm.SBKP}")
-    return line,time_text
+
+    cur_best = Fct(swarm.SBKP)
+    print("cur best = ",cur_best)
 
 
 # ------------------------- Plot 2 ------------------------- 
+step=0
+run = True
+
+while run:
+    for event in pygame.event.get():
+        if event.type == KEYDOWN:
+            if event.key == K_ESCAPE:
+                run = False
+        
+        elif event.type == QUIT:
+            run = False
+        
+    
+    
+    screen.fill(WHITE)
+    
+    if step < 10:
+        text = "Initial Positions"
+    
+    elif step == 19:
+        run = False
+
+    else:
+        update()
+        print(f"\nStep {step-9} :")
+        text = f"Step {step-9} : Best Known Position = {swarm.SBKP[0]:.2e}"
+
+    for i in range(N_part):
+        x,y = int(Swarm.PartPositions[i][0]*Ratio_Screen_Grid)+SCREEN_WIDTH//2, 300
+        pygame.draw.circle(screen, BLACK, (x,y), block_size)   
 
 
+    texte_surface = font.render(text,True,BLACK)
 
+    screen.blit(texte_surface, ((SCREEN_WIDTH - texte_surface.get_width())//2, 60))
+    step += 1
+    
+    pygame.time.delay(1000)
+    pygame.display.flip()
 
-ani = animation.FuncAnimation(fig=fig, func=update, frames=N_Steps, interval=anim_time, blit=True, repeat=False)
-plt.show()
 
 
 # ------------------------- Final ------------------------- 
 
-print(swarm.SBKP)
 
+pygame.quit()
 print("\nEnd File")
 
 
