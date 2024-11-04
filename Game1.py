@@ -23,8 +23,8 @@ from pygame.locals import (
 
 # ------------------------- Initial Parameters ------------------------- 
 
-Space_Dim = 1
-Size_Grid = np.array([100])   #max of each dim
+Space_Dim = 2
+Size_Grid = np.array([100,100])   #max of each dim
 Uni_Grid_Size = Size_Grid[0]
 
 N_part=20
@@ -41,19 +41,19 @@ anim_time=500 #ms
 
 pygame.init()
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 600
+
 
 #Colors:
 WHITE = (255,255,255)
 BLACK = (0,0,0)
-clock = pygame.time.Clock()
+#clock = pygame.time.Clock()
 block_size = 10
 
 Ratio_Screen_Grid=SCREEN_WIDTH / Uni_Grid_Size
 
 def Fct(x):
-    res = (x[0])**2
+    res = (x[0])**2+(x[1])**2
     return res
 
 # ------------------------- Classes and Functions ------------------------- 
@@ -98,7 +98,7 @@ Initial_Vel = (np.random.rand(N_part,Space_Dim)-0.5)*4*Uni_Grid_Size        #In 
 
 for i in range(N_part):
     pos_i = Initial_Pos[i,:]
-    vel_i = Initial_Vel[i,:]
+    vel_i = [0,0] #Initial_Vel[i,:]
     part_i= Part(i,pos_i,vel_i)
     
     if i==0:
@@ -108,7 +108,7 @@ for i in range(N_part):
         swarm.SBKP[:]=part_i.Pos[:]
 
     swarm.Particles.append(part_i)
-    swarm.PartPositions[i]=pos_i
+    swarm.PartPositions[i][:]=pos_i[:]
 
 print("PosIni = \n", swarm.PartPositions)
 
@@ -116,8 +116,8 @@ print("PosIni = \n", swarm.PartPositions)
 # ------------------------- Plot 1 ------------------------- 
 
 win = pygame.display
-win.set_caption("Test 1")
-screen = win.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
+win.set_caption("Test 2")
+screen = win.set_mode((SCREEN_WIDTH,SCREEN_WIDTH))
 font = pygame.font.Font(None, 30)
 
 
@@ -171,7 +171,7 @@ while run:
     
     screen.fill(WHITE)
     
-    if step < 10:
+    if step < 1:
         text = "Initial Positions"
     
     elif step == 19:
@@ -179,12 +179,12 @@ while run:
 
     else:
         update()
-        print(f"\nStep {step-9} :")
-        text = f"Step {step-9} : Best Known Position = {swarm.SBKP[0]:.2e}"
+        print(f"\nStep {step-0} :")
+        text = f"Step {step-0} : Best Known Position = {swarm.SBKP[0]:.2e} , {swarm.SBKP[1]:.2e} "
 
     for i in range(N_part):
-        x,y = int(Swarm.PartPositions[i][0]*Ratio_Screen_Grid)+SCREEN_WIDTH//2, 300
-        pygame.draw.circle(screen, BLACK, (x,y), block_size)   
+        x,y = int(Swarm.PartPositions[i][0]*Ratio_Screen_Grid/2)+SCREEN_WIDTH//2, int(Swarm.PartPositions[i][1]*Ratio_Screen_Grid/2)+SCREEN_WIDTH//2
+        pygame.draw.circle(screen, BLACK, (x,y), block_size)
 
 
     texte_surface = font.render(text,True,BLACK)
@@ -193,7 +193,7 @@ while run:
     step += 1
     
     pygame.time.delay(1000)
-    pygame.display.flip()
+    pygame.display.update()
 
 
 
