@@ -36,8 +36,11 @@ Phig = 1.6      #Social coefficient
 
 
 N_Steps = 15
+Freq_Move = 10
+
 anim_time=500 #ms
 
+objective = [0,0]
 
 pygame.init()
 
@@ -47,13 +50,16 @@ SCREEN_WIDTH = 600
 #Colors:
 WHITE = (255,255,255)
 BLACK = (0,0,0)
+BLUE = (0,0,255)
+GREEN = (0,255,0)
+
 #clock = pygame.time.Clock()
-block_size = 10
+block_size = 5
 
 Ratio_Screen_Grid=SCREEN_WIDTH / Uni_Grid_Size
 
 def Fct(x):
-    res = (x[0])**2+(x[1])**2
+    res = (x[0]-objective[0])**2+(x[1]-objective[1])**2
     return res
 
 # ------------------------- Classes and Functions ------------------------- 
@@ -78,7 +84,8 @@ class Part:
 class Swarm:
     def __init__(self) -> None:
         Swarm.Particles = []
-        Swarm.PartPositions = np.zeros((N_part,Space_Dim))
+        Swarm.PartPos = np.zeros((N_part,Space_Dim))
+        Swarm.PartPastPos = np.zeros((N_part,Space_Dim))
         Swarm.SBKP = []
 
 
@@ -98,7 +105,7 @@ Initial_Vel = (np.random.rand(N_part,Space_Dim)-0.5)*4*Uni_Grid_Size        #In 
 
 for i in range(N_part):
     pos_i = Initial_Pos[i,:]
-    vel_i = [0,0] #Initial_Vel[i,:]
+    vel_i = Initial_Vel[i,:]
     part_i= Part(i,pos_i,vel_i)
     
     if i==0:
@@ -108,9 +115,10 @@ for i in range(N_part):
         swarm.SBKP[:]=part_i.Pos[:]
 
     swarm.Particles.append(part_i)
-    swarm.PartPositions[i][:]=pos_i[:]
+    swarm.PartPos[i][:] = pos_i[:]
+    swarm.PartPastPos[i][:] = pos_i[:]
 
-print("PosIni = \n", swarm.PartPositions)
+print("PosIni = \n", swarm.PartPos)
 
 
 # ------------------------- Plot 1 ------------------------- 
@@ -141,7 +149,8 @@ def update():
             else:
                 part_i.Pos[dim_ind] = new_pos
         
-        swarm.PartPositions[i][:] = part_i.Pos[:]
+        swarm.PartPastPos[i][:] = swarm.PartPos[i][:]
+        swarm.PartPos[i][:] = part_i.Pos[:]
         Evaluation_i = Fct(part_i.Pos)
 
         if Evaluation_i < Fct(part_i.bkp):
@@ -151,11 +160,13 @@ def update():
     
 
     cur_best = Fct(swarm.SBKP)
-    print("cur best = ",cur_best)
+    print("cur best eval = ",cur_best)
 
 
 # ------------------------- Plot 2 ------------------------- 
 step=0
+ind_move_video = 0
+
 run = True
 
 while run:
@@ -171,28 +182,34 @@ while run:
     
     screen.fill(WHITE)
     
-    if step < 1:
+    if step < 10:
         text = "Initial Positions"
     
     elif step == 19:
         run = False
 
     else:
-        update()
-        print(f"\nStep {step-0} :")
-        text = f"Step {step-0} : Best Known Position = {swarm.SBKP[0]:.2e} , {swarm.SBKP[1]:.2e} "
+        if ind_move_video == 0:
+            update()
+            print(f"\nStep {step-9} :")
+        text = f"Step {step-9} : Best Known Position = {swarm.SBKP[0]:.2e} , {swarm.SBKP[1]:.2e} "
 
     for i in range(N_part):
-        x,y = int(Swarm.PartPositions[i][0]*Ratio_Screen_Grid/2)+SCREEN_WIDTH//2, int(Swarm.PartPositions[i][1]*Ratio_Screen_Grid/2)+SCREEN_WIDTH//2
-        pygame.draw.circle(screen, BLACK, (x,y), block_size)
+        x = int((0.1*(9-ind_move_video)*Swarm.PartPastPos[i][0] + 0.1*(ind_move_video+1)*Swarm.PartPos[i][0])*Ratio_Screen_Grid/2)+SCREEN_WIDTH//2
+        y = int((0.1*(9-ind_move_video)*Swarm.PartPastPos[i][1] + 0.1*(ind_move_video+1)*Swarm.PartPos[i][1])*Ratio_Screen_Grid/2)+SCREEN_WIDTH//2
+        pygame.draw.circle(screen, BLUE, (x,y), block_size)
+    
+    pygame.draw.circle(screen, GREEN, (objective[0]+SCREEN_WIDTH//2,objective[1]+SCREEN_WIDTH//2), 5)
 
 
     texte_surface = font.render(text,True,BLACK)
 
     screen.blit(texte_surface, ((SCREEN_WIDTH - texte_surface.get_width())//2, 60))
-    step += 1
+    if ind_move_video == 0:
+        step += 1
     
-    pygame.time.delay(1000)
+    ind_move_video = (ind_move_video+1)%Freq_Move
+    pygame.time.delay(int(1000/Freq_Move))
     pygame.display.update()
 
 
